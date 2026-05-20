@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "968331958656",
+    "project_id": "local-farmers-20500",
+    "storage_bucket": "local-farmers-20500.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:968331958656:android:e1a60d964e2d061a7f8965",
+        "android_client_info": {
+          "package_name": "syngenta.farmerconnect"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCA-vyKOzFw8_MfxTA7fxCo-8n5BigaZd4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

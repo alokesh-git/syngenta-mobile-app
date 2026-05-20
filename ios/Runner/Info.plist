@@ -47,6 +47,20 @@
 			</array>
 		</dict>
 	</dict>
+	<!-- Location — for nearby farmer discovery -->
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>KisanConnect uses your location to find nearby farmers who can help you.</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>KisanConnect uses your location to find nearby farmers and send timely crop alerts.</string>
+
+	<!-- Camera & Photos — for profile photo -->
+	<key>NSCameraUsageDescription</key>
+	<string>KisanConnect uses your camera so you can add a profile photo.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>KisanConnect accesses your photos so you can set a profile picture.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>KisanConnect saves shared content to your photo library.</string>
+
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
 	<key>UILaunchStoryboardName</key>
