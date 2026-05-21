@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 import '../core/theme.dart';
-import '../providers/auth_provider.dart';
-import '../providers/app_provider.dart';
-import 'auth/login_screen.dart';
-import 'main_shell.dart';
+import '../core/user_store.dart';
+import '../router.dart';
 
+/// App entry point. Initializes [UserStore] and routes to the correct
+/// screen based on auth + profile state:
+///   - no onboarding seen → OnboardingScreen
+///   - not logged in     → LoginScreen
+///   - logged in, no profile → UserDetailsScreen
+///   - fully set up      → HomeScreen
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
 
@@ -13,59 +16,34 @@ class SplashScreen extends StatefulWidget {
   State<SplashScreen> createState() => _SplashScreenState();
 }
 
-class _SplashScreenState extends State<SplashScreen>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
-  late Animation<double> _fadeAnim;
-  late Animation<double> _scaleAnim;
-
+class _SplashScreenState extends State<SplashScreen> {
   @override
   void initState() {
     super.initState();
-    _controller = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1200),
-    );
-    _fadeAnim = CurvedAnimation(parent: _controller, curve: Curves.easeIn);
-    _scaleAnim = Tween<double>(begin: 0.8, end: 1.0).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.elasticOut),
-    );
-    _controller.forward();
-    _init();
+    _bootstrap();
   }
 
-  Future<void> _init() async {
-    await Future.delayed(const Duration(milliseconds: 300));
-    if (!mounted) return;
-    final authProvider = context.read<AuthProvider>();
-    await authProvider.initialize();
-    await context.read<AppProvider>().initialize();
-    await Future.delayed(const Duration(milliseconds: 1200));
-    if (!mounted) return;
-    _navigate(authProvider.status);
-  }
-
-  void _navigate(AuthStatus status) {
-    Widget next;
-    if (status == AuthStatus.authenticated) {
-      next = const MainShell();
-    } else {
-      next = const LoginScreen();
+  Future<void> _bootstrap() async {
+    if (!UserStore.instance.isReady) {
+      await UserStore.instance.init();
     }
-    Navigator.of(context).pushReplacement(
-      PageRouteBuilder(
-        pageBuilder: (_, __, ___) => next,
-        transitionsBuilder: (_, anim, __, child) =>
-            FadeTransition(opacity: anim, child: child),
-        transitionDuration: const Duration(milliseconds: 400),
-      ),
-    );
-  }
+    // Small delay so the splash is visible briefly
+    await Future.delayed(const Duration(milliseconds: 600));
+    if (!mounted) return;
 
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
+    final store = UserStore.instance;
+    String route;
+    if (!store.onboardingSeen) {
+      route = AppRoutes.onboarding;
+    } else if (!store.isLoggedIn) {
+      route = AppRoutes.login;
+    } else if (!store.hasProfile) {
+      route = AppRoutes.userDetails;
+    } else {
+      route = AppRoutes.homeScreen;
+    }
+
+    Navigator.of(context).pushNamedAndRemoveUntil(route, (r) => false);
   }
 
   @override
@@ -73,63 +51,41 @@ class _SplashScreenState extends State<SplashScreen>
     return Scaffold(
       backgroundColor: AppTheme.primary,
       body: Center(
-        child: FadeTransition(
-          opacity: _fadeAnim,
-          child: ScaleTransition(
-            scale: _scaleAnim,
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Container(
-                  width: 100,
-                  height: 100,
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(24),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.2),
-                        blurRadius: 20,
-                        offset: const Offset(0, 8),
-                      ),
-                    ],
-                  ),
-                  child: const Icon(
-                    Icons.agriculture,
-                    size: 60,
-                    color: AppTheme.primary,
-                  ),
-                ),
-                const SizedBox(height: 24),
-                const Text(
-                  'KisanConnect',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 32,
-                    fontWeight: FontWeight.bold,
-                    letterSpacing: 1,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'AI-Powered Farmer Network',
-                  style: TextStyle(
-                    color: Colors.white.withOpacity(0.85),
-                    fontSize: 16,
-                  ),
-                ),
-                const SizedBox(height: 60),
-                SizedBox(
-                  width: 32,
-                  height: 32,
-                  child: CircularProgressIndicator(
-                    color: Colors.white.withOpacity(0.7),
-                    strokeWidth: 2,
-                  ),
-                ),
-              ],
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.15),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.eco, size: 72, color: Colors.white),
             ),
-          ),
+            const SizedBox(height: 24),
+            const Text(
+              'KisanConnect',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 28,
+                fontWeight: FontWeight.bold,
+                letterSpacing: 0.5,
+              ),
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'AI-powered crop assistant',
+              style: TextStyle(color: Colors.white70, fontSize: 14),
+            ),
+            const SizedBox(height: 40),
+            const SizedBox(
+              width: 28, height: 28,
+              child: CircularProgressIndicator(
+                strokeWidth: 2.5,
+                valueColor: AlwaysStoppedAnimation(Colors.white),
+              ),
+            ),
+          ],
         ),
       ),
     );
