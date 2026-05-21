@@ -13,7 +13,8 @@ class LoginScreen extends StatefulWidget {
   State<LoginScreen> createState() => _LoginScreenState();
 }
 
-class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStateMixin {
+class _LoginScreenState extends State<LoginScreen>
+    with SingleTickerProviderStateMixin {
   final _phoneController = TextEditingController();
   final _otpController = TextEditingController();
   final FocusNode _phoneFocusNode = FocusNode();
@@ -67,7 +68,8 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
           _otpSent = err == null;
         });
         if (err != null) {
-          _showSnack('Phone auth failed. Please use the Skip option or try on a real device.');
+          _showSnack(
+              'Phone auth failed. Please use the Skip option or try on a real device.');
         }
       }
     } catch (e) {
@@ -129,14 +131,16 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
             // Page 1: AI Diagnostics
             _buildOnboardingStep(
               title: 'Get AI-Powered Solutions',
-              subtitle: 'Show your crop in live video, get instant analysis and recommended products.',
+              subtitle:
+                  'Show your crop in live video, get instant analysis and recommended products.',
               illustration: _buildAIDiagnosticIllustration(),
               pageIndex: 0,
             ),
             // Page 2: Farmer Network
             _buildOnboardingStep(
               title: 'Connect with Nearby Farmers',
-              subtitle: 'Find and connect with farmers in your area, share experience, and get advice.',
+              subtitle:
+                  'Find and connect with farmers in your area, share experience, and get advice.',
               illustration: _buildNetworkIllustration(),
               pageIndex: 1,
             ),
@@ -179,7 +183,8 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               ),
               child: const Text(
                 'Skip',
@@ -226,7 +231,9 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                     width: _currentPage == index ? 16 : 8,
                     height: 8,
                     decoration: BoxDecoration(
-                      color: _currentPage == index ? const Color(0xFF2E7D32) : Colors.grey.shade300,
+                      color: _currentPage == index
+                          ? const Color(0xFF2E7D32)
+                          : Colors.grey.shade300,
                       borderRadius: BorderRadius.circular(4),
                     ),
                   );
@@ -290,7 +297,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
               ],
             ),
           ),
-          const SizedBox(height: 32),
+          const SizedBox(height: 12),
 
           // Central Photo with Floating Badges
           Center(
@@ -300,8 +307,8 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
               children: [
                 // Crop field image mask
                 Container(
-                  width: 220,
-                  height: 220,
+                  width: 180,
+                  height: 180,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
                     border: Border.all(color: Colors.white, width: 4),
@@ -317,13 +324,15 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                       fit: BoxFit.cover,
                     ),
                   ),
+                  child: Image.asset("assets/farmer.png"),
                 ),
-                // Floating badge 1: Leaf
+                // Floating badge 1: LeafR
                 Positioned(
                   top: 10,
                   left: -10,
                   child: _buildFloatingCircularBadge(
-                    child: const Icon(Icons.eco, color: Color(0xFF2E7D32), size: 22),
+                    child: const Icon(Icons.eco,
+                        color: Color(0xFF2E7D32), size: 22),
                   ),
                 ),
                 // Floating badge 2: Product Bottle Vector
@@ -340,7 +349,8 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                   right: 15,
                   child: _buildFloatingCircularBadge(
                     color: const Color(0xFF2E7D32),
-                    child: const Icon(Icons.check, color: Colors.white, size: 16),
+                    child:
+                        const Icon(Icons.check, color: Colors.white, size: 16),
                   ),
                 ),
               ],
@@ -379,7 +389,9 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                 ),
                 const SizedBox(height: 6),
                 Text(
-                  _otpSent ? 'Sent to +91 ${_phoneController.text}' : 'Enter your mobile number to continue',
+                  _otpSent
+                      ? 'Sent to +91 ${_phoneController.text}'
+                      : 'Enter your mobile number to continue',
                   style: TextStyle(
                     fontSize: 14,
                     color: Colors.grey.shade500,
@@ -394,7 +406,9 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(
-                        color: _phoneHasFocus ? const Color(0xFF2E7D32) : const Color(0xFFE0E0E0),
+                        color: _phoneHasFocus
+                            ? const Color(0xFF2E7D32)
+                            : const Color(0xFFE0E0E0),
                         width: _phoneHasFocus ? 2 : 1,
                       ),
                     ),
@@ -446,7 +460,8 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                               border: InputBorder.none,
                               enabledBorder: InputBorder.none,
                               focusedBorder: InputBorder.none,
-                              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                              contentPadding: const EdgeInsets.symmetric(
+                                  horizontal: 16, vertical: 14),
                             ),
                           ),
                         ),
@@ -477,7 +492,10 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                             )
                           : const Text(
                               'Continue',
-                              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
+                              style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white),
                             ),
                     ),
                   ),
@@ -490,7 +508,8 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                         padding: const EdgeInsets.symmetric(horizontal: 16),
                         child: Text(
                           'or',
-                          style: TextStyle(color: Colors.grey.shade400, fontSize: 13),
+                          style: TextStyle(
+                              color: Colors.grey.shade400, fontSize: 13),
                         ),
                       ),
                       Expanded(child: Divider(color: Colors.grey.shade200)),
@@ -534,7 +553,8 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                     ),
                     decoration: InputDecoration(
                       hintText: '------',
-                      hintStyle: TextStyle(color: Colors.grey.shade400, letterSpacing: 12),
+                      hintStyle: TextStyle(
+                          color: Colors.grey.shade400, letterSpacing: 12),
                       counterText: '',
                     ),
                   ),
@@ -562,7 +582,10 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                             )
                           : Text(
                               'verify'.tr(),
-                              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
+                              style: const TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white),
                             ),
                     ),
                   ),
@@ -575,7 +598,8 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                         onPressed: () => setState(() => _otpSent = false),
                         child: const Text(
                           'Edit Number',
-                          style: TextStyle(color: Colors.grey, fontWeight: FontWeight.bold),
+                          style: TextStyle(
+                              color: Colors.grey, fontWeight: FontWeight.bold),
                         ),
                       ),
                       // Resend Button
@@ -603,7 +627,10 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                   child: RichText(
                     textAlign: TextAlign.center,
                     text: TextSpan(
-                      style: TextStyle(color: Colors.grey.shade500, fontSize: 11, height: 1.4),
+                      style: TextStyle(
+                          color: Colors.grey.shade500,
+                          fontSize: 11,
+                          height: 1.4),
                       children: const [
                         TextSpan(text: 'By continuing, you agree to our '),
                         TextSpan(
@@ -626,7 +653,8 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
   }
 
   // Floating Circular Badge Builder
-  Widget _buildFloatingCircularBadge({required Widget child, Color color = Colors.white}) {
+  Widget _buildFloatingCircularBadge(
+      {required Widget child, Color color = Colors.white}) {
     return Container(
       padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
@@ -757,7 +785,8 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                             decoration: const BoxDecoration(
                               border: Border(
                                 top: BorderSide(color: Colors.white, width: 2),
-                                right: BorderSide(color: Colors.white, width: 2),
+                                right:
+                                    BorderSide(color: Colors.white, width: 2),
                               ),
                             ),
                           ),
@@ -770,7 +799,8 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                             height: 10,
                             decoration: const BoxDecoration(
                               border: Border(
-                                bottom: BorderSide(color: Colors.white, width: 2),
+                                bottom:
+                                    BorderSide(color: Colors.white, width: 2),
                                 left: BorderSide(color: Colors.white, width: 2),
                               ),
                             ),
@@ -784,8 +814,10 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                             height: 10,
                             decoration: const BoxDecoration(
                               border: Border(
-                                bottom: BorderSide(color: Colors.white, width: 2),
-                                right: BorderSide(color: Colors.white, width: 2),
+                                bottom:
+                                    BorderSide(color: Colors.white, width: 2),
+                                right:
+                                    BorderSide(color: Colors.white, width: 2),
                               ),
                             ),
                           ),
@@ -810,194 +842,103 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                                 color: Colors.greenAccent.withOpacity(0.6),
                                 blurRadius: 6,
                                 spreadRadius: 2,
-                      ),
-                    ],
-                  ),
-                ),
-              );
-            },
-          ),
-          // LIVE status badge
-          Positioned(
-            top: 10,
-            left: 10,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
-              decoration: BoxDecoration(
-                color: Colors.black.withOpacity(0.55),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Row(
-                children: [
-                  Container(
-                    width: 5,
-                    height: 5,
-                    decoration: const BoxDecoration(
-                      color: Colors.red,
-                      shape: BoxShape.circle,
-                    ),
-                  ),
-                  const SizedBox(width: 4),
-                  const Text(
-                    'LIVE  00:01:24',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 7,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          // Diagnose text card
-          Positioned(
-            left: 8,
-            right: 8,
-            bottom: 8,
-            child: Container(
-              padding: const EdgeInsets.all(6),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisSize: MainAxisSize.min,
-                      children: const [
-                        Text(
-                          'AI Analysis',
-                          style: TextStyle(
-                            color: Color(0xFF2E7D32),
-                            fontSize: 7,
-                            fontWeight: FontWeight.bold,
+                              ),
+                            ],
                           ),
                         ),
-                        SizedBox(height: 2),
-                        Text(
-                          'Bacterial Leaf Spot',
-                          style: TextStyle(
-                            color: Color(0xFF1E1E1E),
-                            fontSize: 9,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        Text(
-                          'Xanthomonas campestris',
-                          style: TextStyle(
-                            color: Colors.grey,
-                            fontSize: 7,
-                            fontStyle: FontStyle.italic,
-                          ),
-                        ),
-                      ],
-                    ),
+                      );
+                    },
                   ),
-                  Container(
-                    padding: const EdgeInsets.all(1.5),
-                    decoration: const BoxDecoration(
-                      color: Color(0xFF2E7D32),
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(
-                      Icons.check,
-                      color: Colors.white,
-                      size: 8,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-    ),
-  ),
-  // Floating Products Card on the right
-  Positioned(
-    right: -25,
-    top: 45,
-    child: _buildVectorProductCard(),
-  ),
-],
-),
-);
-}
-
-  // Draw Recommended Product Card Vector
-  Widget _buildVectorProductCard() {
-    return Container(
-      width: 95,
-      padding: const EdgeInsets.all(8),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.08),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Text(
-            'Recommended\nProducts',
-            style: TextStyle(
-              fontSize: 9,
-              fontWeight: FontWeight.bold,
-              color: Color(0xFF1E1E1E),
-            ),
-          ),
-          const SizedBox(height: 6),
-          // Draw Pesticide Bottle
-          Center(
-            child: Container(
-              height: 42,
-              width: 28,
-              child: Stack(
-                alignment: Alignment.center,
-                children: [
-                  // Cap
+                  // LIVE status badge
                   Positioned(
-                    top: 0,
+                    top: 10,
+                    left: 10,
                     child: Container(
-                      width: 8,
-                      height: 5,
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 6, vertical: 3),
                       decoration: BoxDecoration(
-                        color: const Color(0xFF1B5E20),
-                        borderRadius: BorderRadius.circular(1.5),
+                        color: Colors.black.withOpacity(0.55),
+                        borderRadius: BorderRadius.circular(10),
                       ),
-                    ),
-                  ),
-                  // Bottle Body
-                  Positioned(
-                    top: 4,
-                    child: Container(
-                      width: 20,
-                      height: 35,
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        border: Border.all(color: Colors.grey.shade300, width: 0.8),
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
+                      child: Row(
                         children: [
                           Container(
-                            width: 16,
-                            height: 10,
-                            color: const Color(0xFFE8F5E9),
-                            child: const Icon(
-                              Icons.eco,
-                              size: 6,
+                            width: 5,
+                            height: 5,
+                            decoration: const BoxDecoration(
+                              color: Colors.red,
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                          const SizedBox(width: 4),
+                          const Text(
+                            'LIVE  00:01:24',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 7,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  // Diagnose text card
+                  Positioned(
+                    left: 8,
+                    right: 8,
+                    bottom: 8,
+                    child: Container(
+                      padding: const EdgeInsets.all(6),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisSize: MainAxisSize.min,
+                              children: const [
+                                Text(
+                                  'AI Analysis',
+                                  style: TextStyle(
+                                    color: Color(0xFF2E7D32),
+                                    fontSize: 7,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                SizedBox(height: 2),
+                                Text(
+                                  'Bacterial Leaf Spot',
+                                  style: TextStyle(
+                                    color: Color(0xFF1E1E1E),
+                                    fontSize: 9,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                Text(
+                                  'Xanthomonas campestris',
+                                  style: TextStyle(
+                                    color: Colors.grey,
+                                    fontSize: 7,
+                                    fontStyle: FontStyle.italic,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          Container(
+                            padding: const EdgeInsets.all(1.5),
+                            decoration: const BoxDecoration(
                               color: Color(0xFF2E7D32),
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(
+                              Icons.check,
+                              color: Colors.white,
+                              size: 8,
                             ),
                           ),
                         ],
@@ -1008,51 +949,19 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
               ),
             ),
           ),
-          const SizedBox(height: 6),
-          // Rating
-          Row(
-            mainAxisAlignment: MainAxisAlignment.end,
-            children: [
-              Text(
-                '4.6',
-                style: TextStyle(
-                  fontSize: 8,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.grey.shade700,
-                ),
-              ),
-              const SizedBox(width: 2),
-              const Icon(
-                Icons.star,
-                color: Colors.amber,
-                size: 8,
-              ),
-            ],
-          ),
-          const SizedBox(height: 4),
-          // Button
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.symmetric(vertical: 4),
-            decoration: BoxDecoration(
-              color: const Color(0xFF1B5E20),
-              borderRadius: BorderRadius.circular(5),
-            ),
-            child: const Center(
-              child: Text(
-                'View',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 8,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ),
-          ),
+          // Floating Products Card on the right
+          // Positioned(
+          //   right: -25,
+          //   top: 45,
+          //   child: _buildVectorProductCard(),
+          // ),
         ],
       ),
     );
   }
+
+  // Draw Recommended Product Card Vector
+  
 
   // Page 2 Mockup: Concentric Radar and Farmer profiles
   Widget _buildNetworkIllustration() {
@@ -1068,7 +977,8 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
             height: 190,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              border: Border.all(color: Colors.green.withOpacity(0.12), width: 1.5),
+              border:
+                  Border.all(color: Colors.green.withOpacity(0.12), width: 1.5),
             ),
           ),
           Container(
@@ -1076,7 +986,8 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
             height: 130,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              border: Border.all(color: Colors.green.withOpacity(0.18), width: 1.5),
+              border:
+                  Border.all(color: Colors.green.withOpacity(0.18), width: 1.5),
             ),
           ),
           Container(
@@ -1084,7 +995,8 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
             height: 70,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              border: Border.all(color: Colors.green.withOpacity(0.24), width: 1.5),
+              border:
+                  Border.all(color: Colors.green.withOpacity(0.24), width: 1.5),
             ),
           ),
           // Center Map Pin
@@ -1133,7 +1045,8 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                 ),
                 const SizedBox(height: 4),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
                   decoration: BoxDecoration(
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(6),
@@ -1178,7 +1091,8 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                 ),
                 const SizedBox(height: 4),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
                   decoration: BoxDecoration(
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(6),
@@ -1223,7 +1137,8 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                 ),
                 const SizedBox(height: 4),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
                   decoration: BoxDecoration(
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(6),
@@ -1236,7 +1151,10 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                   ),
                   child: const Text(
                     'Alert • 500m',
-                    style: TextStyle(fontSize: 7, fontWeight: FontWeight.bold, color: Colors.red),
+                    style: TextStyle(
+                        fontSize: 7,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.red),
                   ),
                 ),
               ],
