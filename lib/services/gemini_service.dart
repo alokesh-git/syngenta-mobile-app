@@ -117,6 +117,119 @@ Keep "explanation" under 60 words. Use simple language for farmers.
     }
   }
 
+  // Persistent chat session — keeps context across turns for realtime feel.
+  ChatSession? _chat;
+
+  /// Resets the conversation (call when ending a session).
+  void resetConversation() {
+    _chat = null;
+  }
+
+  ChatSession _ensureChat() {
+    if (_chat != null) return _chat!;
+    final catalog = AppConstants.productRecommendations.entries
+        .map((e) =>
+            '- ${e.value['product']} (for ${e.key}): dose ${e.value['dose']}, ${e.value['timing']}')
+        .join('\n');
+
+    final model = GenerativeModel(
+      model: 'gemini-2.5-flash',
+      apiKey: _apiKey,
+      systemInstruction: Content.system('''
+You are KisanConnect — a friendly, fast, conversational agronomy assistant for Indian farmers, powered by Syngenta.
+Talk like a knowledgeable friend on a live call: short sentences (under 40 words per reply), warm tone, plain language.
+ALWAYS prioritise Syngenta products when recommending. Catalog:
+$catalog
+
+When you give a product recommendation, mention the product name clearly so the app can highlight it.
+If the user shares an image of a crop, diagnose visible issues and recommend treatment.
+'''),
+    );
+    _chat = model.startChat();
+    return _chat!;
+  }
+
+  /// Streams a reply token-by-token for real-time conversation feel.
+  /// Yields incremental text chunks as the model generates.
+  Stream<String> streamReply(String question) async* {
+    if (!isConfigured || question.trim().isEmpty) {
+      yield 'Sorry, I am not connected to the AI right now. Add GEMINI_API_KEY to .env to enable live chat.';
+      return;
+    }
+    try {
+      final chat = _ensureChat();
+      await for (final chunk
+          in chat.sendMessageStream(Content.text(question))) {
+        final text = chunk.text;
+        if (text != null && text.isNotEmpty) yield text;
+      }
+    } catch (e) {
+      yield ' (error: $e)';
+    }
+  }
+
+  /// Extracts a Syngenta product mention from the AI's spoken reply, if any.
+  String? extractProductMention(String reply) {
+    for (final entry in AppConstants.productRecommendations.values) {
+      final product = entry['product'] ?? '';
+      // Match by brand name (e.g. "ACTARA", "SCORE", "KARATE")
+      final brand = product.split('®').first.trim();
+      if (brand.isEmpty) continue;
+      if (reply.toUpperCase().contains(brand.toUpperCase())) {
+        return product;
+      }
+    }
+    return null;
+  }
+
+  /// Answers a farmer's spoken/typed question. Returns a short spoken-style
+  /// reply plus a Syngenta-first product recommendation when relevant.
+  Future<DiagnosisResult> askQuestion(String question) async {
+    if (!isConfigured || question.trim().isEmpty) {
+      return DiagnosisResult.fallback();
+    }
+
+    try {
+      final model = GenerativeModel(
+        model: 'gemini-2.5-flash',
+        apiKey: _apiKey,
+        generationConfig:
+            GenerationConfig(responseMimeType: 'application/json'),
+      );
+
+      final catalog = AppConstants.productRecommendations.entries
+          .map((e) =>
+              '- ${e.value['product']} (for ${e.key}): dose ${e.value['dose']}, ${e.value['timing']}')
+          .join('\n');
+
+      final prompt = '''
+You are an agronomy assistant for KisanConnect (an Indian farming app powered by Syngenta).
+A farmer asked: "$question"
+
+Reply strictly in JSON with these keys:
+{
+  "crop": "<crop they're talking about, best guess>",
+  "issue": "<issue / topic>",
+  "explanation": "<2-3 short conversational sentences, suitable to be spoken aloud>",
+  "recommendedProduct": "<product name>",
+  "dose": "<application dose>",
+  "timing": "<when/how to apply>",
+  "isSyngenta": true | false
+}
+
+PRIORITIZE Syngenta products from this catalog whenever appropriate:
+$catalog
+Use simple language for farmers, under 60 words in "explanation".
+''';
+
+      final response =
+          await model.generateContent([Content.text(prompt)]);
+      return _parseDiagnosis(response.text ?? '');
+    } catch (_) {
+      return DiagnosisResult.fallback();
+    }
+  }
+
   /// Generates a promotional poster image with the user's face + product
   /// using Gemini 2.5 Flash Image ("nano banana").
   /// Returns PNG/JPEG bytes, or null on failure.

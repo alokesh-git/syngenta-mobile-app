@@ -61,6 +61,12 @@
 	<key>NSPhotoLibraryAddUsageDescription</key>
 	<string>KisanConnect saves shared content to your photo library.</string>
 
+	<!-- Microphone & speech — for AI audio call -->
+	<key>NSMicrophoneUsageDescription</key>
+	<string>KisanConnect uses your microphone so you can talk to the AI assistant.</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>KisanConnect transcribes your voice to ask the AI assistant about your crops.</string>
+
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
 	<key>UILaunchStoryboardName</key>

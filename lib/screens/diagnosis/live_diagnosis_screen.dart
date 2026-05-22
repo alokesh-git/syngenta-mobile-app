@@ -5,6 +5,7 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:speech_to_text/speech_to_text.dart' as stt;
 import '../../core/app_locale.dart';
 import '../../core/theme.dart';
 import '../../core/user_store.dart';
@@ -19,25 +20,51 @@ import 'promo_preview_screen.dart';
 class LiveDiagnosisScreen extends StatefulWidget {
   const LiveDiagnosisScreen({super.key});
 
+  /// Broadcasts whether an AI video call is currently active so the
+  /// surrounding shell (e.g. HomeScreen) can hide chrome like the nav bar.
+  static final ValueNotifier<bool> serviceActiveNotifier =
+      ValueNotifier<bool>(false);
+
   @override
   State<LiveDiagnosisScreen> createState() => _LiveDiagnosisScreenState();
 }
 
 enum _CallStage { idle, connecting, listening, analyzing, result }
 
+enum _AiState { idle, listening, thinking, speaking }
+
+class _ChatTurn {
+  final bool fromUser;
+  final String text;
+  final String? productMention;
+  _ChatTurn(this.fromUser, this.text, [this.productMention]);
+}
+
 class _LiveDiagnosisScreenState extends State<LiveDiagnosisScreen> {
   CameraController? _controller;
   List<CameraDescription> _cameras = [];
   bool _cameraReady = false;
   bool _serviceActive = false;
+  bool _videoEnabled = false; // camera on/off mid-call (audio always on)
   bool _isFlashOn = false;
+  bool _isMuted = false;
   Timer? _timer;
   int _secondsElapsed = 0;
   final FlutterTts _tts = FlutterTts();
+  final stt.SpeechToText _stt = stt.SpeechToText();
+  bool _sttAvailable = false;
+  bool _listeningVoice = false;
+  String _heardText = '';
 
   _CallStage _stage = _CallStage.idle;
   DiagnosisResult? _result;
   String _statusText = '';
+
+  // Realtime conversation state
+  _AiState _aiState = _AiState.idle;
+  final List<_ChatTurn> _turns = [];
+  String _liveReply = ''; // streaming AI reply in progress
+  bool _autoConversation = true; // auto-resume listening after AI speaks
 
   @override
   void dispose() {
@@ -52,22 +79,185 @@ class _LiveDiagnosisScreenState extends State<LiveDiagnosisScreen> {
   Future<void> _startService() async {
     setState(() {
       _serviceActive = true;
+      _videoEnabled = false;
       _stage = _CallStage.connecting;
       _statusText = 'connecting_ai'.tr();
+      _turns.clear();
+      _liveReply = '';
+      _autoConversation = true;
     });
-    await _initCamera();
+    LiveDiagnosisScreen.serviceActiveNotifier.value = true;
+    GeminiService.instance.resetConversation();
+
+    _sttAvailable = await _stt.initialize(
+      onStatus: (status) {
+        // status: "notListening" indicates the user has stopped speaking
+        if (status == 'notListening' && _listeningVoice) {
+          _onUserFinishedSpeaking();
+        }
+      },
+      onError: (_) {
+        if (mounted) setState(() => _listeningVoice = false);
+      },
+    );
+
+    // Auto-restart listening after the AI finishes speaking
+    _tts.setCompletionHandler(() {
+      if (!mounted) return;
+      setState(() => _aiState = _AiState.idle);
+      if (_autoConversation && _serviceActive && _stage != _CallStage.analyzing) {
+        _startListening();
+      }
+    });
+
     if (!mounted) return;
     setState(() {
       _stage = _CallStage.listening;
-      _statusText = 'point_camera'.tr();
+      _statusText = 'Connected. Just start talking…';
     });
     _startTimer();
-    await _speak('tts_hello'.tr());
+    final greeting = UserStore.instance.name.isEmpty
+        ? 'Hello! I am your KisanConnect AI assistant. How can I help your crops today?'
+        : 'Hello ${UserStore.instance.name.split(' ').first}! How can I help your crops today?';
+    await _speakAndWait(greeting);
+  }
+
+  Future<void> _toggleVideo() async {
+    if (_videoEnabled) {
+      // turn camera off
+      await _controller?.dispose();
+      _controller = null;
+      if (!mounted) return;
+      setState(() {
+        _videoEnabled = false;
+        _cameraReady = false;
+        _isFlashOn = false;
+      });
+    } else {
+      setState(() => _videoEnabled = true);
+      await _initCamera();
+    }
+  }
+
+  /// Mic button — toggles between Listening and Muted. In auto mode, the
+  /// mic restarts itself after every AI reply; tapping here just pauses it.
+  Future<void> _toggleVoice() async {
+    if (!_sttAvailable) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Microphone permission denied')),
+      );
+      return;
+    }
+    if (_listeningVoice) {
+      // user wants to interrupt and send what's been heard so far
+      setState(() => _autoConversation = false);
+      await _stt.stop();
+      _onUserFinishedSpeaking();
+    } else {
+      setState(() => _autoConversation = true);
+      await _tts.stop(); // barge-in: cut AI off if it's still talking
+      await _startListening();
+    }
+  }
+
+  Future<void> _startListening() async {
+    if (!_sttAvailable || _listeningVoice) return;
+    setState(() {
+      _heardText = '';
+      _listeningVoice = true;
+      _aiState = _AiState.listening;
+      _statusText = 'Listening…';
+    });
+    await _stt.listen(
+      onResult: (r) => setState(() => _heardText = r.recognizedWords),
+      listenFor: const Duration(seconds: 30),
+      pauseFor: const Duration(seconds: 2), // shorter for snappier turn-taking
+      localeId: 'en_IN',
+    );
+  }
+
+  /// Called when STT ends (timeout or pause) — sends the heard text.
+  void _onUserFinishedSpeaking() {
+    if (!mounted) return;
+    final spoken = _heardText.trim();
+    setState(() => _listeningVoice = false);
+    if (spoken.isEmpty) {
+      // nothing heard — if auto mode, restart listening
+      if (_autoConversation && _serviceActive) _startListening();
+      return;
+    }
+    setState(() {
+      _turns.add(_ChatTurn(true, spoken));
+      _heardText = '';
+    });
+    _streamAiReply(spoken);
+  }
+
+  Future<void> _streamAiReply(String userText) async {
+    setState(() {
+      _aiState = _AiState.thinking;
+      _statusText = 'Thinking…';
+      _liveReply = '';
+      _stage = _CallStage.analyzing;
+    });
+
+    final buffer = StringBuffer();
+    try {
+      await for (final chunk
+          in GeminiService.instance.streamReply(userText)) {
+        if (!mounted) return;
+        buffer.write(chunk);
+        setState(() => _liveReply = buffer.toString());
+      }
+    } catch (_) {}
+
+    final full = buffer.toString().trim();
+    if (full.isEmpty) {
+      if (mounted) setState(() => _aiState = _AiState.idle);
+      if (_autoConversation && _serviceActive) _startListening();
+      return;
+    }
+
+    final product = GeminiService.instance.extractProductMention(full);
+    if (!mounted) return;
+    setState(() {
+      _turns.add(_ChatTurn(false, full, product));
+      _liveReply = '';
+      _stage = _CallStage.listening;
+      _aiState = _AiState.speaking;
+      _statusText = '';
+      if (product != null) {
+        _result = DiagnosisResult(
+          crop: 'Crop',
+          issue: 'Recommendation',
+          explanation: full,
+          recommendedProduct: product,
+          dose: '',
+          timing: '',
+          isSyngenta: true,
+        );
+      }
+    });
+    await _speakAndWait(full);
+  }
+
+  Future<void> _speakAndWait(String text) async {
+    try {
+      setState(() => _aiState = _AiState.speaking);
+      await _tts.setLanguage('en-IN');
+      await _tts.setPitch(1.0);
+      await _tts.setSpeechRate(0.5);
+      await _tts.speak(text);
+    } catch (_) {}
   }
 
   Future<void> _endCall() async {
+    _autoConversation = false;
     _timer?.cancel();
     await _tts.stop();
+    _tts.setCompletionHandler(() {});
+    await _stt.stop();
+    GeminiService.instance.resetConversation();
     await _controller?.dispose();
     _controller = null;
     if (!mounted) return;
@@ -78,6 +268,16 @@ class _LiveDiagnosisScreenState extends State<LiveDiagnosisScreen> {
       _secondsElapsed = 0;
       _result = null;
     });
+    LiveDiagnosisScreen.serviceActiveNotifier.value = false;
+  }
+
+  @override
+  void deactivate() {
+    // Safety: if the screen is being torn down while active, restore chrome.
+    if (_serviceActive) {
+      LiveDiagnosisScreen.serviceActiveNotifier.value = false;
+    }
+    super.deactivate();
   }
 
   Future<void> _initCamera() async {
@@ -311,7 +511,7 @@ class _LiveDiagnosisScreenState extends State<LiveDiagnosisScreen> {
               width: double.infinity,
               child: ElevatedButton.icon(
                 onPressed: _startService,
-                icon: const Icon(Icons.videocam_rounded, color: Colors.white),
+                icon: const Icon(Icons.phone_in_talk_rounded, color: Colors.white),
                 label: Text('start_ai_call'.tr(),
                     style: const TextStyle(
                         color: Colors.white,
@@ -383,7 +583,7 @@ class _LiveDiagnosisScreenState extends State<LiveDiagnosisScreen> {
           ),
         ),
 
-        // camera preview
+        // main viewport: camera if video on, else audio call visual
         Expanded(
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -392,19 +592,22 @@ class _LiveDiagnosisScreenState extends State<LiveDiagnosisScreen> {
               child: Stack(
                 fit: StackFit.expand,
                 children: [
-                  if (_cameraReady && _controller != null)
+                  if (_videoEnabled && _cameraReady && _controller != null)
                     CameraPreview(_controller!)
+                  else if (_videoEnabled)
+                    Container(color: Colors.black87)
                   else
-                    Container(color: Colors.black87),
+                    _audioVisual(),
 
-                  // viewfinder corners
-                  Center(
-                    child: SizedBox(
-                      width: 240,
-                      height: 240,
-                      child: CustomPaint(painter: _CornerPainter()),
+                  // viewfinder corners (video only)
+                  if (_videoEnabled)
+                    Center(
+                      child: SizedBox(
+                        width: 240,
+                        height: 240,
+                        child: CustomPaint(painter: _CornerPainter()),
+                      ),
                     ),
-                  ),
 
                   // overlay text
                   if (_statusText.isNotEmpty)
@@ -433,31 +636,32 @@ class _LiveDiagnosisScreenState extends State<LiveDiagnosisScreen> {
                       ),
                     ),
 
-                  // flash button
-                  Positioned(
-                    top: 14,
-                    right: 14,
-                    child: GestureDetector(
-                      onTap: () async {
-                        if (_controller == null) return;
-                        await _controller!.setFlashMode(
-                            _isFlashOn ? FlashMode.off : FlashMode.torch);
-                        setState(() => _isFlashOn = !_isFlashOn);
-                      },
-                      child: Container(
-                        padding: const EdgeInsets.all(10),
-                        decoration: BoxDecoration(
-                          color: Colors.black.withValues(alpha: 0.4),
-                          shape: BoxShape.circle,
-                        ),
-                        child: Icon(
-                          _isFlashOn ? Icons.flash_on : Icons.flash_off,
-                          color: Colors.white,
-                          size: 20,
+                  // flash button (video only)
+                  if (_videoEnabled && _cameraReady)
+                    Positioned(
+                      top: 14,
+                      right: 14,
+                      child: GestureDetector(
+                        onTap: () async {
+                          if (_controller == null) return;
+                          await _controller!.setFlashMode(
+                              _isFlashOn ? FlashMode.off : FlashMode.torch);
+                          setState(() => _isFlashOn = !_isFlashOn);
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            color: Colors.black.withValues(alpha: 0.4),
+                            shape: BoxShape.circle,
+                          ),
+                          child: Icon(
+                            _isFlashOn ? Icons.flash_on : Icons.flash_off,
+                            color: Colors.white,
+                            size: 20,
+                          ),
                         ),
                       ),
                     ),
-                  ),
                 ],
               ),
             ),
@@ -476,54 +680,231 @@ class _LiveDiagnosisScreenState extends State<LiveDiagnosisScreen> {
   }
 
   Widget _controlsPanel() {
-    final canAnalyze = _stage == _CallStage.listening && _cameraReady;
     final analyzing = _stage == _CallStage.analyzing;
+    final canAnalyze =
+        _stage == _CallStage.listening && _videoEnabled && _cameraReady;
+
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
-      child: Row(
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 20),
+      child: Column(
         children: [
-          // end call
-          GestureDetector(
-            onTap: _endCall,
-            child: Container(
-              padding: const EdgeInsets.all(16),
-              decoration: const BoxDecoration(
+          // Top row: round toggles (mic, video, end)
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            children: [
+              _circleControl(
+                icon: _listeningVoice ? Icons.mic : Icons.mic_none,
+                label: _listeningVoice ? 'Listening' : 'Tap to speak',
+                color: _listeningVoice ? AppTheme.primary : Colors.grey.shade800,
+                onTap: _toggleVoice,
+                active: _listeningVoice,
+              ),
+              _circleControl(
+                icon: _videoEnabled ? Icons.videocam : Icons.videocam_off,
+                label: _videoEnabled ? 'Video on' : 'Video off',
+                color: _videoEnabled ? AppTheme.primary : Colors.grey.shade800,
+                onTap: _toggleVideo,
+                active: _videoEnabled,
+              ),
+              _circleControl(
+                icon: Icons.call_end,
+                label: 'End',
                 color: Colors.red,
-                shape: BoxShape.circle,
+                onTap: _endCall,
+                active: true,
               ),
-              child:
-                  const Icon(Icons.call_end, color: Colors.white, size: 28),
-            ),
+            ],
           ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: ElevatedButton.icon(
-              onPressed: canAnalyze ? _analyze : null,
-              icon: analyzing
-                  ? const SizedBox(
-                      width: 18,
-                      height: 18,
-                      child: CircularProgressIndicator(
-                          color: Colors.white, strokeWidth: 2),
-                    )
-                  : const Icon(Icons.auto_awesome, color: Colors.white),
-              label: Text(
-                analyzing ? 'analyzing'.tr() : 'analyze_crop'.tr(),
-                style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold),
+          // Analyze button — only meaningful when video is on
+          if (_videoEnabled) ...[
+            const SizedBox(height: 14),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: canAnalyze ? _analyze : null,
+                icon: analyzing
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(
+                            color: Colors.white, strokeWidth: 2),
+                      )
+                    : const Icon(Icons.auto_awesome, color: Colors.white),
+                label: Text(
+                  analyzing ? 'analyzing'.tr() : 'analyze_crop'.tr(),
+                  style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold),
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppTheme.primary,
+                  disabledBackgroundColor:
+                      AppTheme.primary.withValues(alpha: 0.4),
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14)),
+                ),
               ),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppTheme.primary,
-                disabledBackgroundColor: AppTheme.primary.withValues(alpha: 0.4),
-                padding: const EdgeInsets.symmetric(vertical: 18),
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(40)),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _circleControl({
+    required IconData icon,
+    required String label,
+    required Color color,
+    required VoidCallback onTap,
+    required bool active,
+  }) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        GestureDetector(
+          onTap: onTap,
+          child: Container(
+            width: 60,
+            height: 60,
+            decoration: BoxDecoration(
+              color: active ? color : Colors.grey.shade200,
+              shape: BoxShape.circle,
+              boxShadow: active
+                  ? [
+                      BoxShadow(
+                        color: color.withValues(alpha: 0.35),
+                        blurRadius: 14,
+                        offset: const Offset(0, 4),
+                      ),
+                    ]
+                  : [],
+            ),
+            child: Icon(icon,
+                color: active ? Colors.white : Colors.grey.shade700, size: 26),
+          ),
+        ),
+        const SizedBox(height: 6),
+        Text(label,
+            style: TextStyle(
+                fontSize: 11, color: AppTheme.textSecondary)),
+      ],
+    );
+  }
+
+  /// Audio-only viewport — animated AI avatar, status, and realtime captions.
+  Widget _audioVisual() {
+    final stateLabel = switch (_aiState) {
+      _AiState.listening => 'Listening',
+      _AiState.thinking => 'Thinking',
+      _AiState.speaking => 'Speaking',
+      _AiState.idle => 'Connected',
+    };
+    final stateColor = switch (_aiState) {
+      _AiState.listening => Colors.lightGreenAccent,
+      _AiState.thinking => Colors.amberAccent,
+      _AiState.speaking => Colors.white,
+      _AiState.idle => Colors.white70,
+    };
+
+    return Container(
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            AppTheme.primaryDark,
+            AppTheme.primary,
+            AppTheme.primaryLight,
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+      ),
+      child: Column(
+        children: [
+          const SizedBox(height: 24),
+          _PulseAvatar(
+            active: _aiState == _AiState.listening ||
+                _aiState == _AiState.speaking,
+          ),
+          const SizedBox(height: 12),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                width: 8,
+                height: 8,
+                decoration: BoxDecoration(
+                  color: stateColor,
+                  shape: BoxShape.circle,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                stateLabel,
+                style: TextStyle(
+                  color: stateColor,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: 0.5,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          // realtime caption — what the user is saying OR AI's streaming reply
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
+              child: ListView(
+                reverse: true,
+                physics: const BouncingScrollPhysics(),
+                children: [
+                  if (_listeningVoice && _heardText.isNotEmpty)
+                    _bubble(text: _heardText, fromUser: true, live: true),
+                  if (_liveReply.isNotEmpty)
+                    _bubble(text: _liveReply, fromUser: false, live: true),
+                  ..._turns.reversed.map(
+                    (t) => _bubble(text: t.text, fromUser: t.fromUser),
+                  ),
+                ],
               ),
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _bubble({required String text, required bool fromUser, bool live = false}) {
+    return Align(
+      alignment: fromUser ? Alignment.centerRight : Alignment.centerLeft,
+      child: Container(
+        margin: const EdgeInsets.symmetric(vertical: 4),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        constraints: const BoxConstraints(maxWidth: 300),
+        decoration: BoxDecoration(
+          color: fromUser
+              ? Colors.white.withValues(alpha: 0.9)
+              : Colors.black.withValues(alpha: 0.35),
+          borderRadius: BorderRadius.only(
+            topLeft: const Radius.circular(16),
+            topRight: const Radius.circular(16),
+            bottomLeft: Radius.circular(fromUser ? 16 : 4),
+            bottomRight: Radius.circular(fromUser ? 4 : 16),
+          ),
+          border: live
+              ? Border.all(color: Colors.white.withValues(alpha: 0.6))
+              : null,
+        ),
+        child: Text(
+          text,
+          style: TextStyle(
+            color: fromUser ? AppTheme.textPrimary : Colors.white,
+            fontSize: 14,
+            height: 1.35,
+          ),
+        ),
       ),
     );
   }
@@ -661,6 +1042,84 @@ class _LiveDiagnosisScreenState extends State<LiveDiagnosisScreen> {
             ],
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _PulseAvatar extends StatefulWidget {
+  final bool active;
+  const _PulseAvatar({required this.active});
+
+  @override
+  State<_PulseAvatar> createState() => _PulseAvatarState();
+}
+
+class _PulseAvatarState extends State<_PulseAvatar>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _c;
+
+  @override
+  void initState() {
+    super.initState();
+    _c = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1400),
+    )..repeat();
+  }
+
+  @override
+  void dispose() {
+    _c.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _c,
+      builder: (_, __) {
+        final t = _c.value;
+        return SizedBox(
+          width: 200,
+          height: 200,
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              if (widget.active) ...[
+                _ring(t, 0.0),
+                _ring(t, 0.33),
+                _ring(t, 0.66),
+              ],
+              Container(
+                width: 110,
+                height: 110,
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.18),
+                  shape: BoxShape.circle,
+                  border: Border.all(color: Colors.white, width: 2),
+                ),
+                child: const Icon(Icons.smart_toy_rounded,
+                    color: Colors.white, size: 56),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _ring(double t, double phase) {
+    final value = ((t + phase) % 1.0);
+    final size = 110.0 + value * 90;
+    final opacity = (1.0 - value).clamp(0.0, 1.0) * 0.4;
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        border:
+            Border.all(color: Colors.white.withValues(alpha: opacity), width: 2),
       ),
     );
   }

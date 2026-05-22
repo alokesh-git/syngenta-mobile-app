@@ -30,9 +30,16 @@ class _HomeScreenState extends State<HomeScreen> {
           index: _currentIndex,
           children: _screens,
         ),
-        bottomNavigationBar: _FloatingNavBar(
-          currentIndex: _currentIndex,
-          onTap: (i) => setState(() => _currentIndex = i),
+        bottomNavigationBar: ValueListenableBuilder<bool>(
+          valueListenable: LiveDiagnosisScreen.serviceActiveNotifier,
+          builder: (context, callActive, _) {
+            // Hide the floating nav bar while an AI video call is active
+            if (callActive) return const SizedBox.shrink();
+            return _FloatingNavBar(
+              currentIndex: _currentIndex,
+              onTap: (i) => setState(() => _currentIndex = i),
+            );
+          },
         ),
       ),
     );
