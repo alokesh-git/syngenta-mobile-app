@@ -3,7 +3,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'core/app_locale.dart';
 import 'core/theme.dart';
 import 'core/user_store.dart';
@@ -40,13 +40,14 @@ void main() async {
   }
 
   runApp(
-    EasyLocalization(
+    ProviderScope(
+        child: EasyLocalization(
       supportedLocales: AppLocale.supported,
       path: 'assets/translations',
       fallbackLocale: const Locale('en'),
       startLocale: AppLocale.fromName(UserStore.instance.language),
       child: const KisanConnectApp(),
-    ),
+    )),
   );
 }
 

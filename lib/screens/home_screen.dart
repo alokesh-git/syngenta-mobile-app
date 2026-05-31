@@ -1,7 +1,7 @@
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import '../core/theme.dart';
-import 'diagnosis/live_diagnosis_screen.dart';
+import 'diagnosis/live_intract_screen.dart';
 import 'connect_farmers_screen.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -15,7 +15,7 @@ class _HomeScreenState extends State<HomeScreen> {
   int _currentIndex = 0;
 
   final List<Widget> _screens = const [
-    LiveDiagnosisScreen(),
+    LiveIntractScreen(),
     ConnectFarmersScreen(),
   ];
 
@@ -30,16 +30,9 @@ class _HomeScreenState extends State<HomeScreen> {
           index: _currentIndex,
           children: _screens,
         ),
-        bottomNavigationBar: ValueListenableBuilder<bool>(
-          valueListenable: LiveDiagnosisScreen.serviceActiveNotifier,
-          builder: (context, callActive, _) {
-            // Hide the floating nav bar while an AI video call is active
-            if (callActive) return const SizedBox.shrink();
-            return _FloatingNavBar(
-              currentIndex: _currentIndex,
-              onTap: (i) => setState(() => _currentIndex = i),
-            );
-          },
+        bottomNavigationBar: _FloatingNavBar(
+          currentIndex: _currentIndex,
+          onTap: (i) => setState(() => _currentIndex = i),
         ),
       ),
     );
