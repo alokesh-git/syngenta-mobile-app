@@ -1,6 +1,7 @@
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import '../core/theme.dart';
+import '../live_api/live_api_demo.dart';
 import 'diagnosis/live_intract_screen.dart';
 import 'connect_farmers_screen.dart';
 
@@ -15,7 +16,7 @@ class _HomeScreenState extends State<HomeScreen> {
   int _currentIndex = 0;
 
   final List<Widget> _screens = const [
-    LiveIntractScreen(),
+    LiveAPIDemo(),
     ConnectFarmersScreen(),
   ];
 
@@ -42,7 +43,6 @@ class _HomeScreenState extends State<HomeScreen> {
 class _FloatingNavBar extends StatelessWidget {
   final int currentIndex;
   final ValueChanged<int> onTap;
-
   const _FloatingNavBar({
     required this.currentIndex,
     required this.onTap,

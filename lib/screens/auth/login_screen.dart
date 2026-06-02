@@ -181,7 +181,7 @@ class _LoginScreenState extends State<LoginScreen> {
                               enabledBorder: InputBorder.none,
                               focusedBorder: InputBorder.none,
                               contentPadding: const EdgeInsets.symmetric(
-                                  horizontal: 14, vertical: 16),
+                                  horizontal: 12, vertical: 16),
                             ),
                             style: const TextStyle(fontSize: 16),
                           ),

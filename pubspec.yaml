@@ -12,18 +12,18 @@ dependencies:
   cupertino_icons: ^1.0.8
 
   # Firebase
-  firebase_core: ^3.6.0
-  firebase_auth: ^5.3.1
-  cloud_firestore: ^5.4.4
-  firebase_storage: ^12.3.4
-  firebase_messaging: ^15.1.4
+  firebase_core: ^4.10.0
+  firebase_auth: ^6.5.2
+  cloud_firestore: ^6.5.0
+  firebase_storage: ^13.4.2
+  firebase_messaging: ^16.3.0
 
   # State Management
   provider: ^6.1.2
 
   # Location
-  geolocator: ^13.0.2
-  geocoding: ^3.0.0
+  geolocator: ^14.0.1
+  geocoding: ^4.0.0
 
   # Localization
   easy_localization: ^3.0.7
@@ -49,18 +49,25 @@ dependencies:
   google_generative_ai: ^0.4.7
   path_provider: ^2.1.5
   flutter_tts: ^4.2.5
-  flutter_dotenv: ^5.2.1
+  flutter_dotenv: ^6.0.1
   speech_to_text: ^7.0.0
   flutter_riverpod: ^3.3.1
   flutter_animate: ^4.5.2
   record: ^6.2.1
   flutter_soloud: ^3.5.4
-  firebase_ai: ^2.3.0
+  firebase_ai: ^3.12.2
+  permission_handler: ^12.0.3
+  waveform_flutter: ^1.2.0
+  thumbnailer: ^2.2.0
+  flutter_markdown_plus: ^1.0.7
+  file_picker: ^12.0.0-beta.5
+  icons_launcher: ^3.0.0
+  flutter_native_splash: ^2.4.4
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  flutter_lints: ^4.0.0
+  flutter_lints: ^6.0.0
 
 flutter:
   uses-material-design: true
@@ -68,3 +75,20 @@ flutter:
     - assets/
     - assets/translations/
     - .env
+
+icons_launcher:
+  image_path: "assets/appIcon.png"
+  platforms:
+    android:
+      enable: true
+    ios:
+      enable: true
+
+flutter_native_splash:
+  color: "#FFFFFF"
+  image: assets/splash.png
+  fullscreen: true 
+  android_12:
+    color: "#FFFFFF"
+    image: assets/splash.png
+    icon_background_color: "#FFFFFF"

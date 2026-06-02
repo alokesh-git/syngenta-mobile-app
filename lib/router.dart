@@ -1,9 +1,9 @@
-import 'package:farmerconnect/404ErrorScreen.dart';
-import 'package:farmerconnect/screens/auth/login_screen.dart';
-import 'package:farmerconnect/screens/auth/user_details_screen.dart';
-import 'package:farmerconnect/screens/home_screen.dart';
-import 'package:farmerconnect/screens/onboarding/onboarding_screen.dart';
-import 'package:farmerconnect/screens/splash_screen.dart';
+import '404ErrorScreen.dart';
+import 'screens/auth/login_screen.dart';
+import 'screens/auth/user_details_screen.dart';
+import 'screens/home_screen.dart';
+import 'screens/onboarding/onboarding_screen.dart';
+import 'screens/splash_screen.dart';
 import 'package:flutter/material.dart';
 
 class AppRoutes {

@@ -84,7 +84,7 @@ class _MyHomePageState extends ConsumerState<LiveIntractScreen> {
       log("Error during audio initialization: $e");
       if (!mounted) return;
       print(e);
-      
+
       if (e is MicrophonePermissionDeniedException) {
         setState(() {
           _microphonePermissionDenied = true;
@@ -170,7 +170,8 @@ class _MyHomePageState extends ConsumerState<LiveIntractScreen> {
                 const SizedBox(height: 20),
                 // Core benefits/features container
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 16.0, vertical: 12.0),
                   decoration: BoxDecoration(
                     color: Colors.grey.shade50,
                     borderRadius: BorderRadius.circular(16.0),
@@ -520,21 +521,51 @@ class _MyHomePageState extends ConsumerState<LiveIntractScreen> {
       bottomNavigationBar: BottomBar(
         child: Row(
           children: [
-            ChatButton(),
-            VideoButton(
-              isActive: _cameraIsActive,
-              onPressed: toggleVideoStream,
-            ),
-            const Spacer(),
-            MuteButton(
-              isMuted: audioInput.isPaused,
-              onPressed: _audioStreamIsActive ? toggleMuteInput : null,
-            ),
+            if (!_audioStreamIsActive)
+              Expanded(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      "AI Plant Doctor",
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black87,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      "Tap to speak with AI for your crops",
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: Colors.grey.shade600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            if (_audioStreamIsActive) ...[
+              VideoButton(
+                isActive: _cameraIsActive,
+                onPressed: toggleVideoStream,
+              ),
+              const Spacer(),
+              MuteButton(
+                isMuted: audioInput.isPaused,
+                onPressed: _audioStreamIsActive ? toggleMuteInput : null,
+              ),
+            ],
             CallButton(
               isActive: _audioStreamIsActive,
-              onPressed: _audioIsInitialized
+              onPressed: _audioStreamIsActive
                   ? toggleAudioStream
-                  : (_microphonePermissionDenied ? _showPermissionDialog : null),
+                  : (_audioIsInitialized
+                      ? toggleAudioStream
+                      : (_microphonePermissionDenied
+                          ? _showPermissionDialog
+                          : null)),
             ),
           ],
         ),
